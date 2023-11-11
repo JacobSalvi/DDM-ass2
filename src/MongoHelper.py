@@ -11,3 +11,72 @@ class MongoHelper:
 
     def add_many_to_collection(self, documents, collection_name="Papers"):
         self.__db[collection_name].insert_many(documents=documents)
+
+    def get_restaurants(self, restaurants_link: list) -> list:
+        restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": restaurants_link}})
+        return [restaurant for restaurant in restaurants]
+
+    def search_in_city(self, city_name: str) -> list:
+        """
+        helper functions to return restaurants in a single city
+        :param city_name: name of the city
+        :return: list of links to restaurants
+        """
+        restaurants = self.__db["Position"].find({"city": city_name})
+        return [restaurant.get("restaurant_link") for restaurant in restaurants]
+
+    def search_with_feature(self, feature: str, city: str) -> list:
+        """
+        filter restaurants in an area that posses a feature
+        :param feature: word to search
+        :param city: city to search in
+        :return: list of restaurants
+        """
+        city_link: list = self.search_in_city(city_name=city)
+        restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
+        return [restaurant for restaurant in restaurants]
+
+    def search_popular_in_city(self, city_name: str) -> list:
+        """
+        return the 3 most popular places (generic) in a city
+        :param city_name: name of the city
+        :return: list of restaurants link
+        """
+        restaurants = self.__db["Popularity"].find({"popularity_generic": {"$regex": f"^#[0-9]\D.*{city_name}$"}}).sort({"popularity_generic": 1}).limit(3)
+        return [restaurant.get("restaurant_link") for restaurant in restaurants]
+        # return [restaurant for restaurant in restaurants]  # for testing
+
+    def search_close_restaurants(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
+        """
+        find all restaurants in an area, Warning, the database seem to have incorrect values!!!
+        :param my_latitude: latitude of center point to search
+        :param my_longitude: longitude of center point to search
+        :param max_distance: maximum distance from center point of search (is in degree, so very small value
+        should be provided, 1 deg of lat is around 111km, 1 del of long is 71 km)
+        :return: list of restaurants links
+        """
+        expression = {
+            "$sqrt": {
+                "$add": [
+                    {
+                        "$pow": [
+                            {
+                                "$subtract": [my_longitude, "$longitude"]
+                            },
+                            2
+                        ]
+                    },
+                    {
+                        "$pow": [
+                            {
+                                "$subtract": [my_latitude, "$latitude"]
+                            },
+                            2
+                        ]
+                    }
+                ]
+            }
+        }
+        restaurants = self.__db["Positions"].find({"$expr": {"$lte": [expression, max_distance]}}).limit(10)
+        return [restaurant.get("restaurant_link") for restaurant in restaurants]
+        # return [{"city": restaurant.get("city"), "lat": restaurant.get("latitude"), "lon": restaurant.get("longitude")} for restaurant in restaurants]  # for test
