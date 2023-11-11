@@ -1,4 +1,14 @@
+from enum import Enum
+
 from pymongo import MongoClient
+
+
+class Rating(Enum):
+    excellent = 5
+    very_good = 4
+    average = 3
+    poor = 2
+    terrible = 1
 
 
 class MongoHelper:
@@ -25,6 +35,7 @@ class MongoHelper:
         restaurants = self.__db["Position"].find({"city": city_name})
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
 
+    # Query
     def search_with_feature(self, feature: str, city: str) -> list:
         """
         filter restaurants in an area that posses a feature
@@ -36,6 +47,7 @@ class MongoHelper:
         restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
         return [restaurant for restaurant in restaurants]
 
+    # Query
     def search_popular_in_city(self, city_name: str) -> list:
         """
         return the 3 most popular places (generic) in a city
@@ -46,6 +58,7 @@ class MongoHelper:
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
         # return [restaurant for restaurant in restaurants]  # for testing
 
+    # Query
     def search_close_restaurants(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
         """
         find all restaurants in an area, Warning, the database seem to have incorrect values!!!
@@ -125,3 +138,40 @@ class MongoHelper:
         for row in cursor:
             result.append(row)
         return result
+
+    # Command
+    def update_ratings(self, restaurant_link: str, rating: Rating):
+        """
+        update the rating of a restaurant
+        :param restaurant_link: the link to the restaurant
+        :param rating: new rating to add
+        :return:
+        """
+        old_rating = self.__db["Ratings"].find_one({"restaurant_link": restaurant_link})
+        if not rating:
+            print(f"Restaurant link: {restaurant_link} not found in DB")
+            return
+        old_rating_table: dict = {
+            "excellent": old_rating.get("excellent"),
+            "very_good": old_rating.get("very_good"),
+            "average": old_rating.get("average"),
+            "poor": old_rating.get("poor"),
+            "terrible": old_rating.get("terrible"),
+        }
+        old_rating_table[rating.name] = old_rating_table[rating.name] + 1
+
+        total = 0
+        review_count = 0
+        for key, val in old_rating_table.items():
+            review_count = review_count + val
+            total = total + (val * Rating[key].value)
+        new_average = total / review_count
+
+        self.__db["Ratings"].update_one({"restaurant_link": restaurant_link},
+                                        {"$set": {
+                                            "avg_rating": new_average,
+                                            rating.name: old_rating_table[rating.name]
+                                        }})
+
+        self.__db["Review"].update_one({"restaurant_link": restaurant_link},
+                                       {"$inc": {"total_reviews_count": 1}})
