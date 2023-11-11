@@ -58,7 +58,8 @@ def initializeDB():
         priceInfo = {
             "restaurant_link": line[headers["restaurant_link"]],
             "price_level": line[headers["price_level"]],
-            "price_range": line[headers["price_range"]],
+            "min_price": min_price,
+            "max_price": max_price
         }
         foodInf = {
             "restaurant_link": line[headers["restaurant_link"]],

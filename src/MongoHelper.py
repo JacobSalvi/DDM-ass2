@@ -45,7 +45,7 @@ class MongoHelper:
                                                                            "default_language": "English",
                                                                            "restaurant_link": {"$in":{
                                                                                self.__db["Price"].find({
-
+                                                                                   ""
                                                                                })
 
                                                                            }}}).distinct("restaurant_link")
