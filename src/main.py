@@ -10,6 +10,7 @@ from src.MongoHelper import MongoHelper
 #  total_reviews_count,default_language,reviews_count_in_default_language,
 #  avg_rating,excellent,very_good,average,poor,terrible,food,service,value,atmosphere)
 
+
 def initializeDB():
     csv_handler: CsvHandler = CsvHandler("../tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
@@ -46,6 +47,14 @@ def initializeDB():
             "popularity_generic": line[headers["popularity_generic"]],
             "top_tags": line[headers["top_tags"]],
         }
+        pr = line[headers["price_range"]].replace(",", "")
+        pr = pr.replace("CHF\u00A0", "$")
+        min_price= None
+        max_price=None
+        if pr != "":
+            min_price=int(pr.split("-")[0][1:])
+            max_price = int(pr.split("-")[1][1:])
+
         priceInfo = {
             "restaurant_link": line[headers["restaurant_link"]],
             "price_level": line[headers["price_level"]],
@@ -112,11 +121,6 @@ def get_restaurant_in_radius(mh: MongoHelper, lat: float, long: float, radius: f
     pass
 
 
-def get_vegan_restaurants_in_cities(mh: MongoHelper, cities: list[str]):
-
-    pass
-
-
 def get_best_restaurant_in_city(mh: MongoHelper, city: str):
     pass
 
@@ -126,6 +130,8 @@ def sort_with_weighted_average(mh: MongoHelper,):
 
 
 if __name__ == '__main__':
-    # initializeDB()
+    initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
+    # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
+    # mongoHelper.sort_with_weighted_rating("France")
     pass
