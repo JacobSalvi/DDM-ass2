@@ -2,3 +2,4 @@
 .venv
 tripadvisor_european_restaurants.csv
 .idea
+./src/__pycache__/*
