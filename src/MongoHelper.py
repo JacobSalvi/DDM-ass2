@@ -38,18 +38,20 @@ class MongoHelper:
             result.append(row)
         return result
 
-    def get_english_speaking_always_open_restaurants(self):
-        cursor = self.__db["Schedule"].find({"open_days_per_week": 7,
-                                             "restaurant_link": {"$in": {
-                                                 self.__db["Review"].find({"total_review_count": {"$gte": 0},
-                                                                           "default_language": "English",
-                                                                           "restaurant_link": {"$in":{
-                                                                               self.__db["Price"].find({
-                                                                                   ""
-                                                                               })
+    def get_english_speaking_always_open_restaurants(self, number_of_open_days: int, review_count: int, min_price: int, max_price: int):
 
-                                                                           }}}).distinct("restaurant_link")
-                                             }}})
+        cursor = self.__db["Schedule"].find({"open_days_per_week": number_of_open_days,
+                                             "restaurant_link": {"$in":
+                                                 self.__db["Review"].find({"total_reviews_count": {"$gte": review_count},
+                                                                           "default_language": "English",
+                                                                           "restaurant_link": {"$in":
+                                                                               self.__db["Price"].find({
+                                                                                   "min_price": {"$ne": None, "$gte": min_price},
+                                                                                   "max_price": {"$ne": None, "$lte": max_price}
+                                                                               }).distinct("restaurant_link")
+                                                                           }}).distinct("restaurant_link")
+                                             }})
+
 
         result = []
         for row in cursor:

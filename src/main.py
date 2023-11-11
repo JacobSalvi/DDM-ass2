@@ -70,12 +70,16 @@ def initializeDB():
             "vegan_options": line[headers["vegan_options"]],
             "gluten_free": line[headers["gluten_free"]],
         }
+
+        opdw = None if line[headers["open_days_per_week"]] == "" else float(line[headers["open_days_per_week"]])
+        ophw = None if line[headers["open_hours_per_week"]] == "" else float(line[headers["open_hours_per_week"]])
+        wsw = None if line[headers["working_shifts_per_week"]] == "" else float(line[headers["working_shifts_per_week"]])
         schedule = {
             "restaurant_link": line[headers["restaurant_link"]],
             "original_open_hours": line[headers["original_open_hours"]],
-            "open_days_per_week": line[headers["open_days_per_week"]],
-            "open_hours_per_week": line[headers["open_hours_per_week"]],
-            "working_shifts_per_week": line[headers["working_shifts_per_week"]],
+            "open_days_per_week": opdw,
+            "open_hours_per_week": ophw,
+            "working_shifts_per_week": wsw,
         }
         reviews = {
             "restaurant_link": line[headers["restaurant_link"]],
@@ -131,8 +135,9 @@ def sort_with_weighted_average(mh: MongoHelper,):
 
 
 if __name__ == '__main__':
-    initializeDB()
+    # initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")
+    mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)
     pass
