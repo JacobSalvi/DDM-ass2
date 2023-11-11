@@ -10,8 +10,7 @@ from src.MongoHelper import MongoHelper
 #  total_reviews_count,default_language,reviews_count_in_default_language,
 #  avg_rating,excellent,very_good,average,poor,terrible,food,service,value,atmosphere)
 
-if __name__ == '__main__':
-
+def initializeDB():
     csv_handler: CsvHandler = CsvHandler("../tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
@@ -70,13 +69,16 @@ if __name__ == '__main__':
         }
         reviews = {
             "restaurant_link": line[headers["restaurant_link"]],
-            "total_reviews_count": float(line[headers["total_reviews_count"]]) if line[headers["total_reviews_count"]] != "" else 0,
+            "total_reviews_count": float(line[headers["total_reviews_count"]]) if line[headers[
+                "total_reviews_count"]] != "" else 0,
             'default_language': line[headers["default_language"]],
-            'reviews_count_in_default_language': float(line[headers["reviews_count_in_default_language"]]) if line[headers["reviews_count_in_default_language"]] != "" else 0,
+            'reviews_count_in_default_language': float(line[headers["reviews_count_in_default_language"]]) if line[
+                                                                                                                  headers[
+                                                                                                                      "reviews_count_in_default_language"]] != "" else 0,
         }
         ratings = {
             "restaurant_link": line[headers["restaurant_link"]],
-            "avg_rating": float(line[headers["avg_rating"]])if line[headers["avg_rating"]] != "" else 0,
+            "avg_rating": float(line[headers["avg_rating"]]) if line[headers["avg_rating"]] != "" else 0,
             "excellent": float(line[headers["excellent"]]) if line[headers["excellent"]] != "" else 0,
             "very_good": float(line[headers["very_good"]]) if line[headers["very_good"]] != "" else 0,
             "average": float(line[headers["average"]]) if line[headers["average"]] != "" else 0,
@@ -103,5 +105,27 @@ if __name__ == '__main__':
     mh.add_many_to_collection(collection_name="Schedule", documents=sch)
     mh.add_many_to_collection(collection_name="Review", documents=rew)
     mh.add_many_to_collection(collection_name="Ratings", documents=rat)
+    mh.add_many_to_collection(collection_name="FoodInfo", documents=foods)
 
+
+def get_restaurant_in_radius(mh: MongoHelper, lat: float, long: float, radius: float):
+    pass
+
+
+def get_vegan_restaurants_in_cities(mh: MongoHelper, cities: list[str]):
+
+    pass
+
+
+def get_best_restaurant_in_city(mh: MongoHelper, city: str):
+    pass
+
+
+def sort_with_weighted_average(mh: MongoHelper,):
+    pass
+
+
+if __name__ == '__main__':
+    # initializeDB()
+    mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     pass
