@@ -137,4 +137,5 @@ if __name__ == '__main__':
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")
     # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)
+    # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")
     pass

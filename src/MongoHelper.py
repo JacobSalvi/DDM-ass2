@@ -175,3 +175,28 @@ class MongoHelper:
 
         self.__db["Review"].update_one({"restaurant_link": restaurant_link},
                                        {"$inc": {"total_reviews_count": 1}})
+
+    # Command
+    def update_restaurant_feature(self, restaurant_link: str, new_feature: str):
+        """
+        add a feature to a restaurant
+        :param restaurant_link: link to restaurant
+        :param new_feature: feature to add
+        """
+        old_features: str = self.__db["Restaurants"].find_one({"restaurant_link": restaurant_link}).get("features")
+        feature_list: list = old_features.split(",")
+        feature_list.append(new_feature)
+        new_list: str = ",".join(feature_list)
+        print(new_list)
+        self.update_field(restaurant_link=restaurant_link,
+                          collection="Restaurants",
+                          update={"$set": {"features": new_list}})
+
+    def update_field(self, restaurant_link: str, collection: str, update: dict):
+        """
+        Helper function to update any field of any collection
+        :param restaurant_link: link to restaurant
+        :param collection: collection name
+        :param update: query to use as update
+        """
+        self.__db[collection].update_one({"restaurant_link": restaurant_link}, update)
