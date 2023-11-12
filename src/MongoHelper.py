@@ -34,7 +34,10 @@ class MongoHelper:
         :param city: city to search in
         :return: list of restaurants
         """
-        restaurants = self.__db["Restaurants"].find({"Position.city": city, "features": {"$regex": f".*{feature}.*"}})
+        restaurants = self.__db["Restaurants"].find({
+            'Position.city': city,
+            'features': feature
+        })
         return [restaurant for restaurant in restaurants]
 
     # Query ok
@@ -98,12 +101,14 @@ class MongoHelper:
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
                                                projection={"weightedRating": {
-                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value", "$Rating.service"]},
+                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value",
+                                                            "$Rating.service"]},
                                                    "restaurant_link": 1})
         elements = [el for el in cursor]
         return sorted(elements, key=lambda el: el["weightedRating"], reverse=True)
 
-    def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
+    def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int,
+                                                     max_price: int):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
                                                 "Review.total_reviews_count": {"$gte": reviews},
                                                 "Review.default_language": "English",
@@ -113,26 +118,26 @@ class MongoHelper:
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
-                                                    "features": {"$all": ["Seating", "ServesAlcohol"]},
-                                                    "FoodInfo.cuisines": {"$in": ["French"]},
-                                                    "Schedule.open_days_per_week": {"$gte": 5}
-                                                    },
+                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
+                                                     "FoodInfo.cuisines": {"$in": ["French"]},
+                                                     "Schedule.open_days_per_week": {"$gte": 5}
+                                                     },
                                              update=[{
-                                                "$set": {
-                                                    "Price.min_price": {
-                                                        "$switch": {
-                                                            "branches": [
-                                                                {"case":
-                                                                     {"$eq": ["Price.min_price", None]},
-                                                                 "then": minimum_price
-                                                                 }
-                                                            ],
-                                                            "default":{"$sum": ["Price.min_price", increase]}
-                                                        }
-                                                    }
+                                                 "$set": {
+                                                     "Price.min_price": {
+                                                         "$switch": {
+                                                             "branches": [
+                                                                 {"case":
+                                                                      {"$eq": ["Price.min_price", None]},
+                                                                  "then": minimum_price
+                                                                  }
+                                                             ],
+                                                             "default": {"$sum": ["Price.min_price", increase]}
+                                                         }
+                                                     }
 
-                                                },
-                                            }])
+                                                 },
+                                             }])
         return
 
     def add_weekend_availability(self):
@@ -140,7 +145,7 @@ class MongoHelper:
             "Schedule.original_open_hours.Sat": {"$exists": True},
             "Schedule.original_open_hours.Sun": {"$exists": True}
         },
-                                             update={"$push": {"features": "openDuringTheWeekEnd"}})
+            update={"$push": {"features": "openDuringTheWeekEnd"}})
         return
 
     # Command ok
@@ -172,12 +177,12 @@ class MongoHelper:
         new_average = total / review_count
 
         self.__db["Restaurants"].update_one({"restaurant_link": restaurant_link},
-                                                 {"$set": {
-                                                     "Rating.avg_rating": new_average,
-                                                     f"Rating.{rating.name}": old_rating_table[rating.name]
-                                                 },
-                                                     "$inc": {"Review.total_reviews_count": 1}
-                                                 })
+                                            {"$set": {
+                                                "Rating.avg_rating": new_average,
+                                                f"Rating.{rating.name}": old_rating_table[rating.name]
+                                            },
+                                                "$inc": {"Review.total_reviews_count": 1}
+                                            })
 
     # Command ok
     def update_restaurant_feature(self, restaurant_link: str, new_feature: str):

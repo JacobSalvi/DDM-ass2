@@ -16,7 +16,7 @@ from src.MongoHelper import MongoHelper, Rating
 
 
 def initializeDB():
-    csv_handler: CsvHandler = CsvHandler("../tripadvisor_european_restaurants.csv")
+    csv_handler: CsvHandler = CsvHandler("../../tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
     restaurants = []
@@ -124,8 +124,8 @@ if __name__ == '__main__':
     # mongoHelper.search_restaurants_in_radius(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)  # 62.22
     # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)  # 4.01
     # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")  # 3.44
-    # mongoHelper.search_popular_in_city(city_name="Paris")
-    # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")
+    # mongoHelper.search_popular_in_city(city_name="Paris")  # 574.81
+    # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass
