@@ -145,7 +145,9 @@ if __name__ == '__main__':
     # mongoHelper.search_popular_in_city(city_name="Paris")  # 574.81
     # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
     # print(mongoHelper.find_most_expensive_restaurant_in_each_country())  # 11815.973
-    # print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())) #3050.0259399414062
+    # print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())) #3050.03
+    # print((mongoHelper.get_top5_countries_with__highest_average_excellent_reviews())) # 1874.02
+
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass

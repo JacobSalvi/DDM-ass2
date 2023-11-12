@@ -200,20 +200,20 @@ class MongoHelper:
         cursor = self.__db["Restaurants"].aggregate([
             {"$match": {"Rating.excellent": {"$exists": True}}},
             {"$group": {
-                "country": "$Position.country",
+                "_id": "$Position.country",
                 "total_excellents": {"$sum": "$Rating.excellent"},
                 "num_restaurants": {"$sum": 1}
             }},
             {"$project": {
-                "avg_excellent": {"$divide": ["total_excellents", "num_restaurants"]}
+                "avg_excellent": {"$divide": ["$total_excellents", "$num_restaurants"]}
             }},
-            {"$sort": {"avg_excellent_Reviews": -1}},
+            {"$sort": {"avg_excellent": -1}},
             {"$limit": 5}
         ])
         if not pretty:
             return [result for result in cursor]
         else:
-            return prettify([{"Country": row['country'],
+            return prettify([{"Country": row['_id'],
                               "Average of excellent reviews": math.floor(row['avg_excellent'])}
                              for row in cursor])
 
