@@ -30,7 +30,6 @@ def initializeDB():
                }
         continent = line[headers["original_location"]].replace("[","").replace('"',"").split(",")[0]
         position = {
-            "restaurant_link": line[headers["restaurant_link"]],
             # "original_location": line[headers["original_location"]],
             "continent": continent,
             'country': line[headers["country"]],
@@ -43,7 +42,6 @@ def initializeDB():
         }
         top_args = [] if line[headers["top_tags"]] == "" else line[headers["top_tags"]].replace(" ", "").split(",")
         popularity = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "popularity_detailed": line[headers["popularity_detailed"]],
             "popularity_generic": line[headers["popularity_generic"]],
             "top_tags": top_args,
@@ -57,7 +55,6 @@ def initializeDB():
             max_price = int(pr.split("-")[1][1:])
 
         priceInfo = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "price_level": line[headers["price_level"]],
             "min_price": min_price,
             "max_price": max_price
@@ -65,7 +62,6 @@ def initializeDB():
         meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ","").split(",")
         cuisine = [] if line[headers["cuisines"]] == "" else line[headers["cuisines"]].replace(" ", "").split(",")
         foodInf = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "meals": meals,
             "cuisines": cuisine,
             "special_diets": line[headers["special_diets"]],
@@ -74,14 +70,12 @@ def initializeDB():
             "gluten_free": line[headers["gluten_free"]],
         }
         schedule = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "original_open_hours": {} if line[headers["original_open_hours"]] == "" else json.loads(line[headers["original_open_hours"]]),
             "open_days_per_week": None if line[headers["open_days_per_week"]] == "" else float(line[headers["open_days_per_week"]]),
             "open_hours_per_week": None if line[headers["open_hours_per_week"]] == "" else float(line[headers["open_hours_per_week"]]),
             "working_shifts_per_week": None if line[headers["working_shifts_per_week"]] == "" else float(line[headers["working_shifts_per_week"]]),
         }
         reviews = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "total_reviews_count": float(line[headers["total_reviews_count"]]) if line[headers[
                 "total_reviews_count"]] != "" else 0,
             'default_language': line[headers["default_language"]],
@@ -90,7 +84,6 @@ def initializeDB():
                                                                                                                       "reviews_count_in_default_language"]] != "" else 0,
         }
         ratings = {
-            "restaurant_link": line[headers["restaurant_link"]],
             "avg_rating": float(line[headers["avg_rating"]]) if line[headers["avg_rating"]] != "" else 0,
             "excellent": float(line[headers["excellent"]]) if line[headers["excellent"]] != "" else 0,
             "very_good": float(line[headers["very_good"]]) if line[headers["very_good"]] != "" else 0,
@@ -128,10 +121,11 @@ def sort_with_weighted_average(mh: MongoHelper,):
 
 
 if __name__ == '__main__':
-    initializeDB()
+    # initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")
+    mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)
     # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)
     # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")
     pass

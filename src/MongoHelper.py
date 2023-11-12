@@ -94,16 +94,14 @@ class MongoHelper:
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
         # return [{"city": restaurant.get("city"), "lat": restaurant.get("latitude"), "lon": restaurant.get("longitude")} for restaurant in restaurants]  # for test
 
-
     def database(self):
         return self.__db
 
     def get_vegan_restaurants_in_cities(self, cities: list[str]):
-        result = self.__db["FoodInfo"].find({"vegetarian_friendly": "Y",
-                                             "gluten_free": "Y",
-                                             "restaurant_link":
-                                                 {"$in": self.__db["Positions"]
-                                            .find({"city": {"$in": cities}}).distinct("restaurant_link")}}).distinct("restaurant_link")
+        result = self.__db["Restaurants"].find({"FoodInfo.vegetarian_friendly": "Y",
+                                                "FoodInfo.gluten_free": "Y",
+                                                "Position.city": {"$in": cities}
+                                                }).distinct("restaurant_link")
 
         restaurant = []
         for row in result:
@@ -111,28 +109,22 @@ class MongoHelper:
         return restaurant
 
     def sort_with_weighted_rating(self, country: str):
-        cursor = self.__db["Ratings"].find(filter={"restaurant_link":
-                            {"$in": self.__db["Positions"].find({"country": country}).distinct("restaurant_link")}},
-                                           projection={"weightedRating": {'$add': ["$food", "$atmosphere", "$value","$service"]},
-                                                       "restaurant_link": 1}).sort({"avg_rating": -1}).limit(10)
+        cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
+                                               projection={"weightedRating": {
+                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value", "$Rating.service"]},
+                                                   "restaurant_link": 1}).sort({"weightedRating": -1}).limit(10)
 
         result = []
         for row in cursor:
             result.append(row)
         return result
 
-    def get_english_speaking_always_open_restaurants(self):
-        cursor = self.__db["Schedule"].find({"open_days_per_week": 7,
-                                             "restaurant_link": {"$in": {
-                                                 self.__db["Review"].find({"total_review_count": {"$gte": 0},
-                                                                           "default_language": "English",
-                                                                           "restaurant_link": {"$in":{
-                                                                               self.__db["Price"].find({
-                                                                                   ""
-                                                                               })
-
-                                                                           }}}).distinct("restaurant_link")
-                                             }}})
+    def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
+        cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
+                                                "Review.total_reviews_count": {"$gte": reviews},
+                                                "Review.default_language": "English",
+                                                "Price.min_price": {"$gte": min_price},
+                                                "Price.max_price": {"$lte": max_price}})
 
         result = []
         for row in cursor:
