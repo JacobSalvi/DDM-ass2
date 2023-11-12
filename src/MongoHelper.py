@@ -133,7 +133,7 @@ class MongoHelper:
             result.append(row)
         return result
 
-    def increase_price_for_restaurants_with_seating(self, increase: int):
+    def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_one(filter={"Position.city": "Paris",
                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
                                                     "FoodInfo.cuisines": {"$in": ["French"]},
@@ -146,7 +146,7 @@ class MongoHelper:
                                                             "branches": [
                                                                 {"case":
                                                                      {"$eq": ["Price.min_price", None]},
-                                                                 "then": increase
+                                                                 "then": minimum_price
                                                                  }
                                                             ],
                                                             "default":{"$sum": ["Price.min_price", increase]}
