@@ -134,12 +134,12 @@ class MongoHelper:
         return result
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
-        self.__db["Restaurants"].update_one(filter={"Position.city": "Paris",
+        self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
                                                     "FoodInfo.cuisines": {"$in": ["French"]},
                                                     "Schedule.open_days_per_week": {"$gte": 5}
                                                     },
-                                            update=[{
+                                             update=[{
                                                 "$set": {
                                                     "Price.min_price": {
                                                         "$switch": {
@@ -155,6 +155,15 @@ class MongoHelper:
 
                                                 },
                                             }])
+        return
+
+    def add_weekend_availability(self):
+        self.__db["Restaurants"].update_many(filter={
+            "Schedule.original_open_hours.Sat": {"$exists": True},
+            "Schedule.original_open_hours.Sun": {"$exists": True}
+        },
+                                             update={"$push": {"features": "openDuringTheWeekEnd"}})
+        return
 
     # Command ok
     def update_ratings(self, restaurant_link: str, rating: Rating):

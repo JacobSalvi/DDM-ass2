@@ -108,25 +108,14 @@ def initializeDB():
     mh.add_many_to_collection(collection_name="Restaurants", documents=restaurants)
 
 
-def get_restaurant_in_radius(mh: MongoHelper, lat: float, long: float, radius: float):
-    pass
-
-
-def get_best_restaurant_in_city(mh: MongoHelper, city: str):
-    pass
-
-
-def sort_with_weighted_average(mh: MongoHelper,):
-    pass
-
-
 if __name__ == '__main__':
     # initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")
     # mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)
-    mongoHelper.increase_price_for_restaurants_with_seating(10, 5)
+    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5)
+    mongoHelper.add_weekend_availability()
     # mongoHelper.search_close_restaurants(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)
     # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)
     # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")
