@@ -104,14 +104,15 @@ class MongoHelper:
                                                 "FoodInfo.gluten_free": "Y",
                                                 "Position.city": {"$in": cities}
                                                 })
-        return result
+        return [el for el in result]
 
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
                                                projection={"weightedRating": {
                                                    '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value", "$Rating.service"]},
-                                                   "restaurant_link": 1}).sort({"weightedRating": -1}).limit(10)
-        return cursor
+                                                   "restaurant_link": 1})
+        elements = [el for el in cursor]
+        return sorted(elements, key=lambda el: el["weightedRating"], reverse=True)
 
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
@@ -119,7 +120,7 @@ class MongoHelper:
                                                 "Review.default_language": "English",
                                                 "Price.min_price": {"$gte": min_price},
                                                 "Price.max_price": {"$lte": max_price}})
-        return cursor
+        return [el for el in cursor]
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
