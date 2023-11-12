@@ -61,7 +61,7 @@ class MongoHelper:
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
 
     # Query ok
-    def search_close_restaurants(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
+    def search_restaurants_in_radius(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
         """
         find all restaurants in an area, Warning, the database seem to have incorrect values!!!
         :param my_latitude: latitude of center point to search
