@@ -1,6 +1,8 @@
+import itertools
+import math
 from enum import Enum
-
 from pymongo import MongoClient
+from geopy.distance import great_circle
 
 
 class Rating(Enum):
@@ -9,6 +11,12 @@ class Rating(Enum):
     average = 3
     poor = 2
     terrible = 1
+
+
+def prettify(elements):
+    for element in elements:
+        if element is not None:
+            print(element)
 
 
 class MongoHelper:
@@ -113,7 +121,8 @@ class MongoHelper:
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
                                                projection={"weightedRating": {
-                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value", "$Rating.service"]},
+                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value",
+                                                            "$Rating.service"]},
                                                    "restaurant_link": 1}).sort({"weightedRating": -1}).limit(10)
 
         result = []
@@ -121,17 +130,131 @@ class MongoHelper:
             result.append(row)
         return result
 
-    def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
+    def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int,
+                                                     max_price: int):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
                                                 "Review.total_reviews_count": {"$gte": reviews},
                                                 "Review.default_language": "English",
                                                 "Price.min_price": {"$gte": min_price},
                                                 "Price.max_price": {"$lte": max_price}})
-
         result = []
         for row in cursor:
             result.append(row)
         return result
+
+    def find_most_expensive_restaurant_in_each_country(self, pretty=True):
+        cursor = self.__db["Restaurants"].aggregate([
+            {"$match": {"Price.price_level": "€€-€€€"}},
+            {"$match": {"Price.max_price": {"$exists": True}}},
+            {"$sort": {"Price.max_price": -1}},
+            {"$group": {
+                "id": "$Position.country",
+                "most_expensive_restaurant": {"$first": "$$ROOT"}
+            }}
+        ])
+        if not pretty:
+            return list(cursor)
+        else:
+            return prettify([{"Country": row['id'],
+                              "restaurant": row["most_expensive_restaurant"]["restaurant_name"],
+                              "Max Price":  row["most_expensive_restaurant"]["Price"]["max_price"],
+                              "Symbolic price": row["most_expensive_restaurant"]["Price"]["price_level"]
+                              }
+                             for row in cursor])
+
+    def find_top10_highest_rating_restaurant_in_the_5most_popular_cities(self, pretty=True):
+        # Find the most popular cities in the world,
+        # in order to do it we assumed that the most popular cities are the cities with most entries in the db
+        top_cities_cursor = self.__db["Restaurants"].aggregate([
+            {"$match": {"Position.city": {"$exists": True, "$ne": ""}}},
+            {"$group": {"id": "$Position.city", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 5}
+        ])
+
+        # Retrive the highest revived restaurant in the most popular cities. The reviewed score is determined useing
+        # both the average rating of a restaurant and the number of excellent reviews
+        top_cities = [city['id'] for city in top_cities_cursor]
+        restaurant_cursor = self.__db["Restaurants"].find({
+            "Position.city": {"$in": top_cities},
+        }).sort([("Rating.avg_rating", -1), ("Rating.excellent", -1)]).limit(10)
+
+        if not pretty:
+            return [restaurant for restaurant in restaurant_cursor]
+        else:
+            return prettify([{
+                "City": restaurant["Position"]["city"],
+                "Restaurant": restaurant["restaurant_name"],
+                "Average rating": restaurant["Rating"]["avg_rating"],
+                "Number of excellent ratings": restaurant["Rating"]["excellent"]
+            }
+                for restaurant in restaurant_cursor])
+
+    def get_top5_countries_with__highest_average_excellent_reviews(self, pretty=True):
+        cursor = self.__db["Restaurants"].aggregate([
+            {"$match": {"Rating.excellent": {"$exists": True}}},
+            {"$group": {
+                "country": "$Position.country",
+                "total_excellents": {"$sum": "$Rating.excellent"},
+                "num_restaurants": {"$sum": 1}
+            }},
+            {"$project": {
+                "avg_excellent": {"$divide": ["total_excellents", "num_restaurants"]}
+            }},
+            {"$sort": {"avg_excellent_Reviews": -1}},
+            {"$limit": 5}
+        ])
+        if not pretty:
+            return [result for result in cursor]
+        else:
+            return prettify([{"Country": row['country'],
+                              "Average of excellent reviews": math.floor(row['avg_excellent'])}
+                             for row in cursor])
+
+    def find_the_closest_three_restaurant_in_randon_city(self, city="Rome"):
+
+        # find a rancom city with at least 10 restaurant and at most 100
+        cities = [
+            {"$group": {"_id": "$Position.city", "counts": {"$sum": 1}}},
+            {"$match": {"counts": {"$gte": 10, "$lte": 100}}},
+            {"$sample": {"size": 1}}
+        ]
+        city = list(self.__db["Restaurants"].aggregate(cities))
+
+        city_name = city[0]["_id"] if city else None
+
+        if city_name is None:
+            raise ValueError("city name is none")
+
+        # Create a map with all restaurants in city,
+        # containing the key res
+        query = {
+            "Position.city": city_name,
+            "Position.latitude": {"$exists": True},
+            "Position.longitude": {"$exists": True}
+        }
+        restaurants_positions = list(self.__db["Restaurants"].find(query,
+                       {"restaurant_name": 1, "Position.latitude": 1,"Position.longitude": 1}))
+
+        if restaurants_positions is None:
+            raise ValueError("no positions for restaurant")
+        # Calculating pairwise distances
+        min_distance = float("inf")
+        triple = None
+
+        for r1, r2, r3 in itertools.combinations(restaurants_positions, 3):
+
+            location1 = (r1["Position"]["latitude"], r1["Position"]["longitude"])
+            location2 = (r2["Position"]["latitude"], r2["Position"]["longitude"])
+            location3 = (r3["Position"]["latitude"], r3["Position"]["longitude"])
+            distance = great_circle(location1, location2, location3).meters
+
+            if distance < min_distance:
+                min_distance = distance
+                triple = (r1["restaurant_name"], r2["restaurant_name"], r3["restaurant_name"])
+
+        print(f"in City {city_name} closest restaurants between each oter are: {triple[0]},{triple[1]} and {triple[2]}, "
+              f"distance between the them is {min_distance} m")
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_one(filter={"Position.city": "Paris",
@@ -149,7 +272,7 @@ class MongoHelper:
                                                                  "then": minimum_price
                                                                  }
                                                             ],
-                                                            "default":{"$sum": ["Price.min_price", increase]}
+                                                            "default": {"$sum": ["Price.min_price", increase]}
                                                         }
                                                     }
 
@@ -185,12 +308,12 @@ class MongoHelper:
         new_average = total / review_count
 
         self.__db["Restaurants"].update_one({"restaurant_link": restaurant_link},
-                                                 {"$set": {
-                                                     "Rating.avg_rating": new_average,
-                                                     f"Rating.{rating.name}": old_rating_table[rating.name]
-                                                 },
-                                                     "$inc": {"Review.total_reviews_count": 1}
-                                                 })
+                                            {"$set": {
+                                                "Rating.avg_rating": new_average,
+                                                f"Rating.{rating.name}": old_rating_table[rating.name]
+                                            },
+                                                "$inc": {"Review.total_reviews_count": 1}
+                                            })
 
     # Command ok
     def update_restaurant_feature(self, restaurant_link: str, new_feature: str):

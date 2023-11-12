@@ -6,7 +6,7 @@ class CsvHandler:
     def __init__(self, path):
         self._csv_path: Path = Path(path)
         self._lines: list[list[str]] = []
-        with open(path, newline='') as csvfile:
+        with open(path, newline='',  mode="r", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             headers = next(reader)
             self._headers = {el: idx for idx, el in enumerate(headers)}
@@ -18,4 +18,3 @@ class CsvHandler:
 
     def header(self):
         return self._headers
-
