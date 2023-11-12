@@ -1,12 +1,9 @@
-import concurrent
 import itertools
 import math
 from enum import Enum
 from geopy.distance import great_circle
 from pymongo import MongoClient
 from pymongo import UpdateOne
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 
 class Rating(Enum):
     excellent = 5
@@ -353,7 +350,6 @@ class MongoHelper:
         if to_be_updated:
             self.__db["Restaurants"].bulk_write(to_be_updated)
 
-        return "Similar restaurants in Paris updated by price level."
 
 
 

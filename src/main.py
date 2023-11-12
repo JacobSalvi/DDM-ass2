@@ -152,7 +152,7 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------- Commands
     # mongoHelper.increase_price_for_restaurants_with_seating(10, 5))  # 576.23
 
-    mongoHelper.update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Rivarennes() # 2615.03
+    mongoHelper.update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Rivarennes() #  3003
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass
