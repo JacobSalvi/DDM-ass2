@@ -105,10 +105,10 @@ class MongoHelper:
                                                 "Position.city": {"$in": cities}
                                                 }).distinct("restaurant_link")
 
-        restaurant = []
+        restaurants = []
         for row in result:
-            restaurant.append(row)
-        return restaurant
+            restaurants.append(row)
+        return [restaurant.get("restaurant_link") for restaurant in restaurants]
 
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
@@ -119,7 +119,7 @@ class MongoHelper:
         result = []
         for row in cursor:
             result.append(row)
-        return result
+        return [restaurant.get("restaurant_link") for restaurant in result]
 
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
@@ -131,7 +131,7 @@ class MongoHelper:
         result = []
         for row in cursor:
             result.append(row)
-        return result
+        return [restaurant.get("restaurant_link") for restaurant in result]
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
