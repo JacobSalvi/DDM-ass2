@@ -26,15 +26,6 @@ class MongoHelper:
         restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": restaurants_link}})
         return [restaurant for restaurant in restaurants]
 
-    def search_in_city(self, city_name: str) -> list:
-        """
-        helper functions to return restaurants in a single city
-        :param city_name: name of the city
-        :return: list of links to restaurants
-        """
-        restaurants = self.__db["Restaurants"].find({"Position.city": city_name})
-        return [restaurant.get("restaurant_link") for restaurant in restaurants]
-
     # Query ok
     def search_with_feature(self, feature: str, city: str) -> list:
         """
@@ -43,9 +34,7 @@ class MongoHelper:
         :param city: city to search in
         :return: list of restaurants
         """
-        city_link: list = self.search_in_city(city_name=city)
-        restaurants = self.__db["Restaurants"].find(
-            {"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
+        restaurants = self.__db["Restaurants"].find({"Position.city": city, "features": {"$regex": f".*{feature}.*"}})
         return [restaurant for restaurant in restaurants]
 
     # Query ok
