@@ -1,9 +1,12 @@
+import concurrent
 import itertools
 import math
 from enum import Enum
 from geopy.distance import great_circle
 from pymongo import MongoClient
-
+from pymongo import UpdateOne
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 class Rating(Enum):
     excellent = 5
@@ -15,8 +18,7 @@ class Rating(Enum):
 
 def prettify(elements):
     for element in elements:
-        if element is not None:
-            print(element)
+        print(element)
 
 
 class MongoHelper:
@@ -126,9 +128,11 @@ class MongoHelper:
 
     def find_most_expensive_restaurant_in_each_country(self, pretty=True):
         cursor = self.__db["Restaurants"].aggregate([
+            # filter only for the resturanr tagged "€€-€€€"
             {"$match": {"Price.price_level": "€€-€€€"}},
             {"$match": {"Price.max_price": {"$exists": True}}},
             {"$sort": {"Price.max_price": -1}},
+            # $$ROOT returns the entire document restaurant most expensive for each group
             {"$group": {
                 "_id": "$Position.country",
                 "most_expensive_restaurant": {"$first": "$$ROOT"}
@@ -148,6 +152,7 @@ class MongoHelper:
         # Find the most popular cities in the world,
         # in order to do it we assumed that the most popular cities are the cities with most entries in the db
         top_cities_cursor = self.__db["Restaurants"].aggregate([
+            # $ne filters out string equal to ""
             {"$match": {"Position.city": {"$exists": True, "$ne": ""}}},
             {"$group": {"_id": "$Position.city", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
@@ -172,14 +177,17 @@ class MongoHelper:
             }
                 for restaurant in restaurant_cursor])
 
-    def get_top5_countries_with__highest_average_excellent_reviews(self, pretty=True):
+    def get_top5_countries_with_the_highest_average_excellent_reviews(self, pretty=True):
         cursor = self.__db["Restaurants"].aggregate([
+            # takes only restaurant with excenllent rating
             {"$match": {"Rating.excellent": {"$exists": True}}},
+            # Groups for country, sums up excellent ratings and counting restaurants.
             {"$group": {
                 "_id": "$Position.country",
                 "total_excellents": {"$sum": "$Rating.excellent"},
                 "num_restaurants": {"$sum": 1}
             }},
+            # Calculate the average of excellent reviews, $project adds field to the group
             {"$project": {
                 "avg_excellent": {"$divide": ["$total_excellents", "$num_restaurants"]}
             }},
@@ -195,21 +203,21 @@ class MongoHelper:
 
     def find_the_closest_three_restaurant_in_randon_city(self):
 
-        # find a rancom city with at least 10 restaurant and at most 100
+        # find a random city with at least 10 restaurant and at most 100
         cities = [
             {"$group": {"_id": "$Position.city", "counts": {"$sum": 1}}},
             {"$match": {"counts": {"$gte": 10, "$lte": 100}}},
             {"$sample": {"size": 1}}
         ]
         city = list(self.__db["Restaurants"].aggregate(cities))
-
         city_name = city[0]["_id"] if city else None
+        number_of_resturant = city[0]["counts"]
 
         if city_name is None:
             raise ValueError("city name is none")
 
         # Create a map with all restaurants in city,
-        # containing the key res
+        # containing the key restaurant_name, values: position latitude, position.longitude
         query = {
             "Position.city": city_name,
             "Position.latitude": {"$exists": True},
@@ -221,12 +229,11 @@ class MongoHelper:
 
         if restaurants_positions is None:
             raise ValueError("no positions for restaurant")
-        # Calculating pairwise distances
+
         min_distance = float("inf")
         triple = None
-
+        # tool to find 3 resturants with smallest location fast, mongoDB could not have done it
         for r1, r2, r3 in itertools.combinations(restaurants_positions, 3):
-
             location1 = (r1["Position"]["latitude"], r1["Position"]["longitude"])
             location2 = (r2["Position"]["latitude"], r2["Position"]["longitude"])
             location3 = (r3["Position"]["latitude"], r3["Position"]["longitude"])
@@ -237,7 +244,8 @@ class MongoHelper:
                 triple = (r1["restaurant_name"], r2["restaurant_name"], r3["restaurant_name"])
 
         print(
-            f"in City {city_name} closest restaurants between each oter are: {triple[0]},{triple[1]} and {triple[2]}, "
+            f"in City {city_name} with number of restaurants {number_of_resturant}. The closest restaurants between "
+            f"each other are: {triple[0]},{triple[1]} and {triple[2]}, "
             f"distance between the them is {min_distance} m")
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
@@ -318,3 +326,34 @@ class MongoHelper:
         self.__db["Restaurants"].update_one({"restaurant_link": restaurant_link}, {
             "$addToSet": {"features": new_feature}
         })
+
+    def update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Rivarennes(self):
+        price_levels = ["€", "€€-€€€", "€€€€"]
+        to_be_updated = []
+
+        for level in price_levels:
+            all_restaurants = list(self.__db["Restaurants"].find(
+                # IMPORTANT: unfortunately I could only do it in small cities,
+                # for large cities or the entirety of the db takes too much time
+                {"Position.city": "Rivarennes", "Price.price_level": level},
+                {"restaurant_link": 1}
+            ))
+            all_resturant_links = [r["restaurant_link"] for r in all_restaurants]
+
+            # Assign similar restaurants
+            for restaurant_link in all_resturant_links:
+                #[:4] limit to 4 the operation --> imprve performance
+                similar_priced_restaurant = [r for r in all_resturant_links if r != restaurant_link][:4]
+                to_be_updated.append(UpdateOne(
+                    {"restaurant_link": restaurant_link},
+                    {"$set": {"similar_priced_restaurants": similar_priced_restaurant}}
+                ))
+
+        # write all in bulk should improve performance
+        if to_be_updated:
+            self.__db["Restaurants"].bulk_write(to_be_updated)
+
+        return "Similar restaurants in Paris updated by price level."
+
+
+
