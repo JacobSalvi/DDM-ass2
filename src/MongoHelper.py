@@ -103,23 +103,15 @@ class MongoHelper:
         result = self.__db["Restaurants"].find({"FoodInfo.vegetarian_friendly": "Y",
                                                 "FoodInfo.gluten_free": "Y",
                                                 "Position.city": {"$in": cities}
-                                                }).distinct("restaurant_link")
-
-        restaurants = []
-        for row in result:
-            restaurants.append(row)
-        return [restaurant.get("restaurant_link") for restaurant in restaurants]
+                                                })
+        return result
 
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
                                                projection={"weightedRating": {
                                                    '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value", "$Rating.service"]},
                                                    "restaurant_link": 1}).sort({"weightedRating": -1}).limit(10)
-
-        result = []
-        for row in cursor:
-            result.append(row)
-        return [restaurant.get("restaurant_link") for restaurant in result]
+        return cursor
 
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int, max_price: int):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
@@ -127,11 +119,7 @@ class MongoHelper:
                                                 "Review.default_language": "English",
                                                 "Price.min_price": {"$gte": min_price},
                                                 "Price.max_price": {"$lte": max_price}})
-
-        result = []
-        for row in cursor:
-            result.append(row)
-        return [restaurant.get("restaurant_link") for restaurant in result]
+        return cursor
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
