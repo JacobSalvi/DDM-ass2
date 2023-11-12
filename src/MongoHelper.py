@@ -32,10 +32,10 @@ class MongoHelper:
         :param city_name: name of the city
         :return: list of links to restaurants
         """
-        restaurants = self.__db["Position"].find({"city": city_name})
+        restaurants = self.__db["Restaurants"].find({"Position.city": city_name})
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
 
-    # Query
+    # Query ok
     def search_with_feature(self, feature: str, city: str) -> list:
         """
         filter restaurants in an area that posses a feature
@@ -44,21 +44,23 @@ class MongoHelper:
         :return: list of restaurants
         """
         city_link: list = self.search_in_city(city_name=city)
-        restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
+        restaurants = self.__db["Restaurants"].find(
+            {"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
         return [restaurant for restaurant in restaurants]
 
-    # Query
+    # Query ok
     def search_popular_in_city(self, city_name: str) -> list:
         """
         return the 3 most popular places (generic) in a city
         :param city_name: name of the city
         :return: list of restaurants link
         """
-        restaurants = self.__db["Popularity"].find({"popularity_generic": {"$regex": f"^#[0-9]\D.*{city_name}$"}}).sort({"popularity_generic": 1}).limit(3)
+        restaurants = self.__db["Restaurants"].find({"Popularity.popularity_generic":
+                                                         {"$regex": f"^#[0-9]\D.*{city_name}$"}}).sort(
+            {"Popularity.popularity_generic": 1}).limit(3)
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
-        # return [restaurant for restaurant in restaurants]  # for testing
 
-    # Query
+    # Query ok
     def search_close_restaurants(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
         """
         find all restaurants in an area, Warning, the database seem to have incorrect values!!!
@@ -74,7 +76,7 @@ class MongoHelper:
                     {
                         "$pow": [
                             {
-                                "$subtract": [my_longitude, "$longitude"]
+                                "$subtract": [my_longitude, "$Position.longitude"]
                             },
                             2
                         ]
@@ -82,7 +84,7 @@ class MongoHelper:
                     {
                         "$pow": [
                             {
-                                "$subtract": [my_latitude, "$latitude"]
+                                "$subtract": [my_latitude, "$Position.latitude"]
                             },
                             2
                         ]
@@ -90,10 +92,9 @@ class MongoHelper:
                 ]
             }
         }
-        restaurants = self.__db["Positions"].find({"$expr": {"$lte": [expression, max_distance]}}).limit(10)
+        restaurants = self.__db["Restaurants"].find({"$expr": {"$lte": [expression, max_distance]}}).limit(10)
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
         # return [{"city": restaurant.get("city"), "lat": restaurant.get("latitude"), "lon": restaurant.get("longitude")} for restaurant in restaurants]  # for test
-
 
     def database(self):
         return self.__db
@@ -139,7 +140,7 @@ class MongoHelper:
             result.append(row)
         return result
 
-    # Command
+    # Command ok
     def update_ratings(self, restaurant_link: str, rating: Rating):
         """
         update the rating of a restaurant
@@ -147,8 +148,8 @@ class MongoHelper:
         :param rating: new rating to add
         :return:
         """
-        old_rating = self.__db["Ratings"].find_one({"restaurant_link": restaurant_link})
-        if not rating:
+        old_rating = self.__db["Restaurants"].find_one({"restaurant_link": restaurant_link}).get("Rating")
+        if not rating or not old_rating:
             print(f"Restaurant link: {restaurant_link} not found in DB")
             return
         old_rating_table: dict = {
@@ -167,36 +168,21 @@ class MongoHelper:
             total = total + (val * Rating[key].value)
         new_average = total / review_count
 
-        self.__db["Ratings"].update_one({"restaurant_link": restaurant_link},
-                                        {"$set": {
-                                            "avg_rating": new_average,
-                                            rating.name: old_rating_table[rating.name]
-                                        }})
+        self.__db["Restaurants"].update_one({"restaurant_link": restaurant_link},
+                                                 {"$set": {
+                                                     "Rating.avg_rating": new_average,
+                                                     f"Rating.{rating.name}": old_rating_table[rating.name]
+                                                 },
+                                                     "$inc": {"Review.total_reviews_count": 1}
+                                                 })
 
-        self.__db["Review"].update_one({"restaurant_link": restaurant_link},
-                                       {"$inc": {"total_reviews_count": 1}})
-
-    # Command
+    # Command ok
     def update_restaurant_feature(self, restaurant_link: str, new_feature: str):
         """
-        add a feature to a restaurant
+        add a feature to a restaurant if it do not exist
         :param restaurant_link: link to restaurant
         :param new_feature: feature to add
         """
-        old_features: str = self.__db["Restaurants"].find_one({"restaurant_link": restaurant_link}).get("features")
-        feature_list: list = old_features.split(",")
-        feature_list.append(new_feature)
-        new_list: str = ",".join(feature_list)
-        print(new_list)
-        self.update_field(restaurant_link=restaurant_link,
-                          collection="Restaurants",
-                          update={"$set": {"features": new_list}})
-
-    def update_field(self, restaurant_link: str, collection: str, update: dict):
-        """
-        Helper function to update any field of any collection
-        :param restaurant_link: link to restaurant
-        :param collection: collection name
-        :param update: query to use as update
-        """
-        self.__db[collection].update_one({"restaurant_link": restaurant_link}, update)
+        self.__db["Restaurants"].update_one({"restaurant_link": restaurant_link}, {
+            "$addToSet": {"features": new_feature}
+        })
