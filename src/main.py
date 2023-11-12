@@ -16,7 +16,7 @@ from src.MongoHelper import MongoHelper, Rating
 
 
 def initializeDB():
-    csv_handler: CsvHandler = CsvHandler("../../tripadvisor_european_restaurants.csv")
+    csv_handler: CsvHandler = CsvHandler("tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
     restaurants = []
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")  # 846.56
     # mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)  # 0.37
-    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5)  # 576.23
+    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5))  # 576.23
     # mongoHelper.add_weekend_availability()  # 5671.51
     # mongoHelper.search_restaurants_in_radius(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)  # 62.22
     # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)  # 4.01
@@ -146,8 +146,9 @@ if __name__ == '__main__':
     # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
     # print(mongoHelper.find_most_expensive_restaurant_in_each_country())  # 11815.973
     # print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())) #3050.03
-    # print((mongoHelper.get_top5_countries_with__highest_average_excellent_reviews())) # 1874.02
-
+    # print((mongoHelper.get_top5_countries_with__highest_average_excellent_reviews())) # 1874.02 +
+    # print(mongoHelper.find_the_closest_three_restaurant_in_randon_city()) # 2572.020,2497.96,2444,2947, 2469.03,
+    # 2415.98,2383.03,2481, 3912.00, 2492.03
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass

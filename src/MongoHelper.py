@@ -20,6 +20,9 @@ def prettify(elements):
 
 
 class MongoHelper:
+    def database(self):
+        return self.__db
+
     def __init__(self, host: str, port: int, dbName: str):
         self.__client: MongoClient = MongoClient(host=host, port=port)
         self.__db = self.__client[dbName]
@@ -96,9 +99,6 @@ class MongoHelper:
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
         # return [{"city": restaurant.get("city"), "lat": restaurant.get("latitude"), "lon": restaurant.get("longitude")} for restaurant in restaurants]  # for test
 
-    def database(self):
-        return self.__db
-
     def get_vegan_restaurants_in_cities(self, cities: list[str]):
         result = self.__db["Restaurants"].find({"FoodInfo.vegetarian_friendly": "Y",
                                                 "FoodInfo.gluten_free": "Y",
@@ -124,30 +124,6 @@ class MongoHelper:
                                                 "Price.max_price": {"$lte": max_price}})
         return [el for el in cursor]
 
-    def increase_price_for_restaurants_with_seating(self, city: str, minimum_price: int, increase: int):
-        self.__db["Restaurants"].update_many(filter={"Position.city": city,
-                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
-                                                     "FoodInfo.cuisines": {"$in": ["French"]},
-                                                     "Schedule.open_days_per_week": {"$gte": 5}
-                                                     },
-                                             update=[{
-                                                 "$set": {
-                                                     "Price.min_price": {
-                                                         "$switch": {
-                                                             "branches": [
-                                                                 {"case":
-                                                                      {"$eq": ["Price.min_price", None]},
-                                                                  "then": minimum_price
-                                                                  }
-                                                             ],
-                                                             "default": {"$sum": ["Price.min_price", increase]}
-                                                         }
-                                                     }
-
-                                                 },
-                                             }])
-        return
-
     def find_most_expensive_restaurant_in_each_country(self, pretty=True):
         cursor = self.__db["Restaurants"].aggregate([
             {"$match": {"Price.price_level": "€€-€€€"}},
@@ -163,7 +139,7 @@ class MongoHelper:
         else:
             return prettify([{"Country": row['_id'],
                               "restaurant": row["most_expensive_restaurant"]["restaurant_name"],
-                              "Max Price":  row["most_expensive_restaurant"]["Price"]["max_price"],
+                              "Max Price": row["most_expensive_restaurant"]["Price"]["max_price"],
                               "Symbolic price": row["most_expensive_restaurant"]["Price"]["price_level"]
                               }
                              for row in cursor])
@@ -217,7 +193,7 @@ class MongoHelper:
                               "Average of excellent reviews": math.floor(row['avg_excellent'])}
                              for row in cursor])
 
-    def find_the_closest_three_restaurant_in_randon_city(self, city="Rome"):
+    def find_the_closest_three_restaurant_in_randon_city(self):
 
         # find a rancom city with at least 10 restaurant and at most 100
         cities = [
@@ -240,7 +216,8 @@ class MongoHelper:
             "Position.longitude": {"$exists": True}
         }
         restaurants_positions = list(self.__db["Restaurants"].find(query,
-                       {"restaurant_name": 1, "Position.latitude": 1,"Position.longitude": 1}))
+                                                                   {"restaurant_name": 1, "Position.latitude": 1,
+                                                                    "Position.longitude": 1}))
 
         if restaurants_positions is None:
             raise ValueError("no positions for restaurant")
@@ -259,28 +236,29 @@ class MongoHelper:
                 min_distance = distance
                 triple = (r1["restaurant_name"], r2["restaurant_name"], r3["restaurant_name"])
 
-        print(f"in City {city_name} closest restaurants between each oter are: {triple[0]},{triple[1]} and {triple[2]}, "
-              f"distance between the them is {min_distance} m")
+        print(
+            f"in City {city_name} closest restaurants between each oter are: {triple[0]},{triple[1]} and {triple[2]}, "
+            f"distance between the them is {min_distance} m")
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
-        self.__db["Restaurants"].update_one(filter={"Position.city": "Paris",
-                                                    "features": {"$all": ["Seating", "ServesAlcohol"]},
-                                                    "FoodInfo.cuisines": {"$in": ["French"]},
-                                                    "Schedule.open_days_per_week": {"$gte": 5}
-                                                    },
-                                            update=[{
-                                                "$set": {
-                                                    "Price.min_price": {
-                                                        "$switch": {
-                                                            "branches": [
-                                                                {"case":
-                                                                     {"$eq": ["Price.min_price", None]},
-                                                                 "then": minimum_price
-                                                                 }
-                                                            ],
-                                                            "default": {"$sum": ["Price.min_price", increase]}
-                                                        }
-                                                    }
+        self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
+                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
+                                                     "FoodInfo.cuisines": {"$in": ["French"]},
+                                                     "Schedule.open_days_per_week": {"$gte": 5}
+                                                     },
+                                             update=[{
+                                                 "$set": {
+                                                     "Price.min_price": {
+                                                         "$switch": {
+                                                             "branches": [
+                                                                 {"case":
+                                                                      {"$eq": ["Price.min_price", None]},
+                                                                  "then": minimum_price
+                                                                  }
+                                                             ],
+                                                             "default": {"$sum": ["Price.min_price", increase]}
+                                                         }
+                                                     }
 
                                                  },
                                              }])
