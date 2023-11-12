@@ -2,7 +2,6 @@ import itertools
 import math
 from enum import Enum
 from pymongo import MongoClient
-from geopy.distance import great_circle
 
 
 class Rating(Enum):
@@ -34,15 +33,6 @@ class MongoHelper:
         restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": restaurants_link}})
         return [restaurant for restaurant in restaurants]
 
-    def search_in_city(self, city_name: str) -> list:
-        """
-        helper functions to return restaurants in a single city
-        :param city_name: name of the city
-        :return: list of links to restaurants
-        """
-        restaurants = self.__db["Restaurants"].find({"Position.city": city_name})
-        return [restaurant.get("restaurant_link") for restaurant in restaurants]
-
     # Query ok
     def search_with_feature(self, feature: str, city: str) -> list:
         """
@@ -51,9 +41,10 @@ class MongoHelper:
         :param city: city to search in
         :return: list of restaurants
         """
-        city_link: list = self.search_in_city(city_name=city)
-        restaurants = self.__db["Restaurants"].find(
-            {"restaurant_link": {"$in": city_link}, "features": {"$regex": f".*{feature}.*"}})
+        restaurants = self.__db["Restaurants"].find({
+            'Position.city': city,
+            'features': feature
+        })
         return [restaurant for restaurant in restaurants]
 
     # Query ok
@@ -69,7 +60,7 @@ class MongoHelper:
         return [restaurant.get("restaurant_link") for restaurant in restaurants]
 
     # Query ok
-    def search_close_restaurants(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
+    def search_restaurants_in_radius(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
         """
         find all restaurants in an area, Warning, the database seem to have incorrect values!!!
         :param my_latitude: latitude of center point to search
@@ -111,24 +102,17 @@ class MongoHelper:
         result = self.__db["Restaurants"].find({"FoodInfo.vegetarian_friendly": "Y",
                                                 "FoodInfo.gluten_free": "Y",
                                                 "Position.city": {"$in": cities}
-                                                }).distinct("restaurant_link")
-
-        restaurant = []
-        for row in result:
-            restaurant.append(row)
-        return restaurant
+                                                })
+        return [el for el in result]
 
     def sort_with_weighted_rating(self, country: str):
         cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
                                                projection={"weightedRating": {
                                                    '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value",
                                                             "$Rating.service"]},
-                                                   "restaurant_link": 1}).sort({"weightedRating": -1}).limit(10)
-
-        result = []
-        for row in cursor:
-            result.append(row)
-        return result
+                                                   "restaurant_link": 1})
+        elements = [el for el in cursor]
+        return sorted(elements, key=lambda el: el["weightedRating"], reverse=True)
 
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int,
                                                      max_price: int):
@@ -137,10 +121,31 @@ class MongoHelper:
                                                 "Review.default_language": "English",
                                                 "Price.min_price": {"$gte": min_price},
                                                 "Price.max_price": {"$lte": max_price}})
-        result = []
-        for row in cursor:
-            result.append(row)
-        return result
+        return [el for el in cursor]
+
+    def increase_price_for_restaurants_with_seating(self, city: str, minimum_price: int, increase: int):
+        self.__db["Restaurants"].update_many(filter={"Position.city": city,
+                                                     "features": {"$all": ["Seating", "ServesAlcohol"]},
+                                                     "FoodInfo.cuisines": {"$in": ["French"]},
+                                                     "Schedule.open_days_per_week": {"$gte": 5}
+                                                     },
+                                             update=[{
+                                                 "$set": {
+                                                     "Price.min_price": {
+                                                         "$switch": {
+                                                             "branches": [
+                                                                 {"case":
+                                                                      {"$eq": ["Price.min_price", None]},
+                                                                  "then": minimum_price
+                                                                  }
+                                                             ],
+                                                             "default": {"$sum": ["Price.min_price", increase]}
+                                                         }
+                                                     }
+
+                                                 },
+                                             }])
+        return
 
     def find_most_expensive_restaurant_in_each_country(self, pretty=True):
         cursor = self.__db["Restaurants"].aggregate([
@@ -276,8 +281,17 @@ class MongoHelper:
                                                         }
                                                     }
 
-                                                },
-                                            }])
+                                                 },
+                                             }])
+        return
+
+    def add_weekend_availability(self):
+        self.__db["Restaurants"].update_many(filter={
+            "Schedule.original_open_hours.Sat": {"$exists": True},
+            "Schedule.original_open_hours.Sun": {"$exists": True}
+        },
+            update={"$push": {"features": "openDuringTheWeekEnd"}})
+        return
 
     # Command ok
     def update_ratings(self, restaurant_link: str, rating: Rating):

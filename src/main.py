@@ -1,7 +1,8 @@
 import json
+import time
 
 from src.CsvHandler import CsvHandler
-from src.MongoHelper import MongoHelper
+from src.MongoHelper import MongoHelper, Rating
 
 
 # (restaurant_link,restaurant_name,claimed,awards,keywords, features
@@ -15,17 +16,19 @@ from src.MongoHelper import MongoHelper
 
 
 def initializeDB():
-    csv_handler: CsvHandler = CsvHandler("tripadvisor_european_restaurants.csv")
+    csv_handler: CsvHandler = CsvHandler("../../tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
     restaurants = []
     for line in content:
         features = [] if line[headers["features"]] == "" else line[headers["features"]].replace(" ", "").split(",")
+        awards = [] if line[headers["awards"]] == "" else line[headers["awards"]].split(",")
+        keywords = [] if line[headers["keywords"]] == "" else line[headers["keywords"]].split(",")
         res = {"restaurant_link": line[headers["restaurant_link"]],
                "restaurant_name": line[headers["restaurant_name"]],
                "claimed": line[headers["claimed"]],
-               "awards": line[headers["awards"]],
-               "keywords": line[headers["keywords"]],
+               "awards": awards,
+               "keywords": keywords,
                "features": features
                }
         continent = line[headers["original_location"]].replace("[","").replace('"',"").split(",")[0]
@@ -61,10 +64,11 @@ def initializeDB():
         }
         meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ","").split(",")
         cuisine = [] if line[headers["cuisines"]] == "" else line[headers["cuisines"]].replace(" ", "").split(",")
+        special_diets = [] if line[headers["special_diets"]] == "" else line[headers["special_diets"]].replace(" ", "").split(",")
         foodInf = {
             "meals": meals,
             "cuisines": cuisine,
-            "special_diets": line[headers["special_diets"]],
+            "special_diets": special_diets,
             "vegetarian_friendly": line[headers["vegetarian_friendly"]],
             "vegan_options": line[headers["vegan_options"]],
             "gluten_free": line[headers["gluten_free"]],
@@ -123,18 +127,17 @@ def sort_with_weighted_average(mh: MongoHelper,):
 if __name__ == '__main__':
     # initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
+    before = time.time()
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
-    # mongoHelper.sort_with_weighted_rating("France")
-    # print(mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200))
-    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5)
-    # mongoHelper.search_close_restaurants(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)
-    # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)
-    # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")
-    # mongoHelper.search_popular_in_city(city_name="Paris")
-    # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")
-    # print(mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())
-    # print(mongoHelper.get_top5_countries_with__highest_average_excellent_reviews())
-    # print(mongoHelper.find_most_expensive_restaurant_in_each_country())
-    print(mongoHelper.update_all_restaurants_with_city_similars())
+    # mongoHelper.sort_with_weighted_rating("France")  # 846.56
+    # mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)  # 0.37
+    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5)  # 576.23
+    # mongoHelper.add_weekend_availability()  # 5671.51
+    # mongoHelper.search_restaurants_in_radius(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)  # 62.22
+    # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)  # 4.01
+    # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")  # 3.44
+    # mongoHelper.search_popular_in_city(city_name="Paris")  # 574.81
+    # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
+    after = time.time()
+    print(f"Time: {(after - before) * 1000}")
     pass
-
