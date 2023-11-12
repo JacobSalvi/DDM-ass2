@@ -1,0 +1,70 @@
+{
+  "_id": {
+    "$oid": "String"
+  },
+  "restaurant_link": "String",
+  "restaurant_name": "String",
+  "claimed": "String",
+  "awards": "String",
+  "keywords": "String",
+  "features": [
+    "String"
+  ],
+  "Position": {
+    "continent": "String",
+    "country": "String",
+    "region": "String",
+    "province": "String",
+    "city": "String",
+    "address": "String",
+    "latitude": 45.961674,
+    "longitude": 1.169131
+  },
+  "Popularity": {
+    "popularity_detailed": "String",
+    "popularity_generic": "String",
+    "top_tags": [
+      "String"
+    ]
+  },
+  "Price": {
+    "price_level": "String",
+    "min_price": null,
+    "max_price": null
+  },
+  "FoodInfo": {
+    "meals": [
+      "String"
+    ],
+    "cuisines": [
+      "String"
+    ],
+    "special_diets": "String",
+    "vegetarian_friendly": "N",
+    "vegan_options": "N",
+    "gluten_free": "N"
+  },
+  "Schedule": {
+    "original_open_hours": {},
+    "open_days_per_week": null,
+    "open_hours_per_week": null,
+    "working_shifts_per_week": null
+  },
+  "Review": {
+    "total_reviews_count": 0,
+    "default_language": "String",
+    "reviews_count_in_default_language": 0
+  },
+  "Rating": {
+    "avg_rating": 0,
+    "excellent": 0,
+    "very_good": 0,
+    "average": 0,
+    "poor": 0,
+    "terrible": 0,
+    "food": 0,
+    "service": 0,
+    "value": 0,
+    "atmosphere": 0
+  }
+}
