@@ -31,7 +31,7 @@ def initializeDB():
                "keywords": keywords,
                "features": features
                }
-        continent = line[headers["original_location"]].replace("[","").replace('"',"").split(",")[0]
+        continent = line[headers["original_location"]].replace("[", "").replace('"', "").split(",")[0]
         position = {
             # "original_location": line[headers["original_location"]],
             "continent": continent,
@@ -51,10 +51,10 @@ def initializeDB():
         }
         pr = line[headers["price_range"]].replace(",", "")
         pr = pr.replace("CHF\u00A0", "$")
-        min_price= None
-        max_price=None
+        min_price = None
+        max_price = None
         if pr != "":
-            min_price=int(pr.split("-")[0][1:])
+            min_price = int(pr.split("-")[0][1:])
             max_price = int(pr.split("-")[1][1:])
 
         priceInfo = {
@@ -62,9 +62,11 @@ def initializeDB():
             "min_price": min_price,
             "max_price": max_price
         }
-        meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ","").split(",")
+        meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ", "").split(",")
         cuisine = [] if line[headers["cuisines"]] == "" else line[headers["cuisines"]].replace(" ", "").split(",")
-        special_diets = [] if line[headers["special_diets"]] == "" else line[headers["special_diets"]].replace(" ", "").split(",")
+        special_diets = [] if line[headers["special_diets"]] == "" else line[headers["special_diets"]].replace(" ",
+                                                                                                               "").split(
+            ",")
         foodInf = {
             "meals": meals,
             "cuisines": cuisine,
@@ -74,10 +76,14 @@ def initializeDB():
             "gluten_free": line[headers["gluten_free"]],
         }
         schedule = {
-            "original_open_hours": {} if line[headers["original_open_hours"]] == "" else json.loads(line[headers["original_open_hours"]]),
-            "open_days_per_week": None if line[headers["open_days_per_week"]] == "" else float(line[headers["open_days_per_week"]]),
-            "open_hours_per_week": None if line[headers["open_hours_per_week"]] == "" else float(line[headers["open_hours_per_week"]]),
-            "working_shifts_per_week": None if line[headers["working_shifts_per_week"]] == "" else float(line[headers["working_shifts_per_week"]]),
+            "original_open_hours": {} if line[headers["original_open_hours"]] == "" else json.loads(
+                line[headers["original_open_hours"]]),
+            "open_days_per_week": None if line[headers["open_days_per_week"]] == "" else float(
+                line[headers["open_days_per_week"]]),
+            "open_hours_per_week": None if line[headers["open_hours_per_week"]] == "" else float(
+                line[headers["open_hours_per_week"]]),
+            "working_shifts_per_week": None if line[headers["working_shifts_per_week"]] == "" else float(
+                line[headers["working_shifts_per_week"]]),
         }
         reviews = {
             "total_reviews_count": float(line[headers["total_reviews_count"]]) if line[headers[
@@ -120,7 +126,7 @@ def get_best_restaurant_in_city(mh: MongoHelper, city: str):
     pass
 
 
-def sort_with_weighted_average(mh: MongoHelper,):
+def sort_with_weighted_average(mh: MongoHelper, ):
     pass
 
 
@@ -138,6 +144,8 @@ if __name__ == '__main__':
     # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")  # 3.44
     # mongoHelper.search_popular_in_city(city_name="Paris")  # 574.81
     # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
+    # print(mongoHelper.find_most_expensive_restaurant_in_each_country())  # 11815.973
+    # print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())) #3050.0259399414062
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass

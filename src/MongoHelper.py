@@ -173,14 +173,14 @@ class MongoHelper:
         # in order to do it we assumed that the most popular cities are the cities with most entries in the db
         top_cities_cursor = self.__db["Restaurants"].aggregate([
             {"$match": {"Position.city": {"$exists": True, "$ne": ""}}},
-            {"$group": {"id": "$Position.city", "count": {"$sum": 1}}},
+            {"$group": {"_id": "$Position.city", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 5}
         ])
 
         # Retrive the highest revived restaurant in the most popular cities. The reviewed score is determined useing
         # both the average rating of a restaurant and the number of excellent reviews
-        top_cities = [city['id'] for city in top_cities_cursor]
+        top_cities = [city['_id'] for city in top_cities_cursor]
         restaurant_cursor = self.__db["Restaurants"].find({
             "Position.city": {"$in": top_cities},
         }).sort([("Rating.avg_rating", -1), ("Rating.excellent", -1)]).limit(10)
