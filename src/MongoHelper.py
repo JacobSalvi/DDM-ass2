@@ -300,6 +300,7 @@ class MongoHelper:
         }
         old_rating_table[rating.name] = old_rating_table[rating.name] + 1
 
+
         total = 0
         review_count = 0
         for key, val in old_rating_table.items():
