@@ -21,11 +21,13 @@ def initializeDB():
     restaurants = []
     for line in content:
         features = [] if line[headers["features"]] == "" else line[headers["features"]].replace(" ", "").split(",")
+        awards = [] if line[headers["awards"]] == "" else line[headers["awards"]].split(",")
+        keywords = [] if line[headers["keywords"]] == "" else line[headers["keywords"]].split(",")
         res = {"restaurant_link": line[headers["restaurant_link"]],
                "restaurant_name": line[headers["restaurant_name"]],
                "claimed": line[headers["claimed"]],
-               "awards": line[headers["awards"]],
-               "keywords": line[headers["keywords"]],
+               "awards": awards,
+               "keywords": keywords,
                "features": features
                }
         continent = line[headers["original_location"]].replace("[","").replace('"',"").split(",")[0]
@@ -61,10 +63,11 @@ def initializeDB():
         }
         meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ","").split(",")
         cuisine = [] if line[headers["cuisines"]] == "" else line[headers["cuisines"]].replace(" ", "").split(",")
+        special_diets = [] if line[headers["special_diets"]] == "" else line[headers["special_diets"]].replace(" ", "").split(",")
         foodInf = {
             "meals": meals,
             "cuisines": cuisine,
-            "special_diets": line[headers["special_diets"]],
+            "special_diets": special_diets,
             "vegetarian_friendly": line[headers["vegetarian_friendly"]],
             "vegan_options": line[headers["vegan_options"]],
             "gluten_free": line[headers["gluten_free"]],
