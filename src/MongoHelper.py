@@ -116,8 +116,8 @@ class MongoHelper:
                                                 "Price.max_price": {"$lte": max_price}})
         return [el for el in cursor]
 
-    def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
-        self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
+    def increase_price_for_restaurants_with_seating(self, city: str, minimum_price: int, increase: int):
+        self.__db["Restaurants"].update_many(filter={"Position.city": city,
                                                      "features": {"$all": ["Seating", "ServesAlcohol"]},
                                                      "FoodInfo.cuisines": {"$in": ["French"]},
                                                      "Schedule.open_days_per_week": {"$gte": 5}
