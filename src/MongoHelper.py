@@ -154,14 +154,14 @@ class MongoHelper:
             {"$match": {"Price.max_price": {"$exists": True}}},
             {"$sort": {"Price.max_price": -1}},
             {"$group": {
-                "id": "$Position.country",
+                "_id": "$Position.country",
                 "most_expensive_restaurant": {"$first": "$$ROOT"}
             }}
         ])
         if not pretty:
             return list(cursor)
         else:
-            return prettify([{"Country": row['id'],
+            return prettify([{"Country": row['_id'],
                               "restaurant": row["most_expensive_restaurant"]["restaurant_name"],
                               "Max Price":  row["most_expensive_restaurant"]["Price"]["max_price"],
                               "Symbolic price": row["most_expensive_restaurant"]["Price"]["price_level"]
