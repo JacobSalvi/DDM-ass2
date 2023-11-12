@@ -1,5 +1,7 @@
+import json
+
 from src.CsvHandler import CsvHandler
-from src.MongoHelper import MongoHelper, Rating
+from src.MongoHelper import MongoHelper
 
 
 # (restaurant_link,restaurant_name,claimed,awards,keywords, features
@@ -17,23 +19,20 @@ def initializeDB():
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
     restaurants = []
-    pos = []
-    popu = []
-    prices = []
-    foods = []
-    sch = []
-    rew = []
-    rat = []
     for line in content:
+        features = [] if line[headers["features"]] == "" else line[headers["features"]].replace(" ", "").split(",")
         res = {"restaurant_link": line[headers["restaurant_link"]],
                "restaurant_name": line[headers["restaurant_name"]],
                "claimed": line[headers["claimed"]],
                "awards": line[headers["awards"]],
                "keywords": line[headers["keywords"]],
-               "features": line[headers["features"]]}
+               "features": features
+               }
+        continent = line[headers["original_location"]].replace("[","").replace('"',"").split(",")[0]
         position = {
             "restaurant_link": line[headers["restaurant_link"]],
-            "original_location": line[headers["original_location"]],
+            # "original_location": line[headers["original_location"]],
+            "continent": continent,
             'country': line[headers["country"]],
             "region": line[headers["region"]],
             "province": line[headers["province"]],
@@ -42,11 +41,12 @@ def initializeDB():
             "latitude": float(line[headers["latitude"]]) if line[headers["latitude"]] != "" else 0,
             "longitude": float(line[headers["longitude"]]) if line[headers["longitude"]] != "" else 0
         }
+        top_args = [] if line[headers["top_tags"]] == "" else line[headers["top_tags"]].replace(" ", "").split(",")
         popularity = {
             "restaurant_link": line[headers["restaurant_link"]],
             "popularity_detailed": line[headers["popularity_detailed"]],
             "popularity_generic": line[headers["popularity_generic"]],
-            "top_tags": line[headers["top_tags"]],
+            "top_tags": top_args,
         }
         pr = line[headers["price_range"]].replace(",", "")
         pr = pr.replace("CHF\u00A0", "$")
@@ -62,10 +62,12 @@ def initializeDB():
             "min_price": min_price,
             "max_price": max_price
         }
+        meals = [] if line[headers["meals"]] == "" else line[headers["meals"]].replace(" ","").split(",")
+        cuisine = [] if line[headers["cuisines"]] == "" else line[headers["cuisines"]].replace(" ", "").split(",")
         foodInf = {
             "restaurant_link": line[headers["restaurant_link"]],
-            "meals": line[headers["meals"]],
-            "cuisines": line[headers["cuisines"]],
+            "meals": meals,
+            "cuisines": cuisine,
             "special_diets": line[headers["special_diets"]],
             "vegetarian_friendly": line[headers["vegetarian_friendly"]],
             "vegan_options": line[headers["vegan_options"]],
@@ -73,10 +75,10 @@ def initializeDB():
         }
         schedule = {
             "restaurant_link": line[headers["restaurant_link"]],
-            "original_open_hours": line[headers["original_open_hours"]],
-            "open_days_per_week": line[headers["open_days_per_week"]],
-            "open_hours_per_week": line[headers["open_hours_per_week"]],
-            "working_shifts_per_week": line[headers["working_shifts_per_week"]],
+            "original_open_hours": {} if line[headers["original_open_hours"]] == "" else json.loads(line[headers["original_open_hours"]]),
+            "open_days_per_week": None if line[headers["open_days_per_week"]] == "" else float(line[headers["open_days_per_week"]]),
+            "open_hours_per_week": None if line[headers["open_hours_per_week"]] == "" else float(line[headers["open_hours_per_week"]]),
+            "working_shifts_per_week": None if line[headers["working_shifts_per_week"]] == "" else float(line[headers["working_shifts_per_week"]]),
         }
         reviews = {
             "restaurant_link": line[headers["restaurant_link"]],
@@ -100,23 +102,17 @@ def initializeDB():
             "value": float(line[headers["value"]]) if line[headers["value"]] != "" else 0,
             "atmosphere": float(line[headers["atmosphere"]]) if line[headers["atmosphere"]] != "" else 0
         }
+        res["Position"] = position
+        res["Popularity"] = popularity
+        res["Price"] = priceInfo
+        res["FoodInfo"] = foodInf
+        res["Schedule"] = schedule
+        res["Review"] = reviews
+        res["Rating"] = ratings
         restaurants.append(res)
-        pos.append(position)
-        popu.append(popularity)
-        prices.append(priceInfo)
-        foods.append(foodInf)
-        sch.append(schedule)
-        rew.append(reviews)
-        rat.append(ratings)
+
     mh: MongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     mh.add_many_to_collection(collection_name="Restaurants", documents=restaurants)
-    mh.add_many_to_collection(collection_name="Positions", documents=pos)
-    mh.add_many_to_collection(collection_name="Popularity", documents=popu)
-    mh.add_many_to_collection(collection_name="Price", documents=prices)
-    mh.add_many_to_collection(collection_name="Schedule", documents=sch)
-    mh.add_many_to_collection(collection_name="Review", documents=rew)
-    mh.add_many_to_collection(collection_name="Ratings", documents=rat)
-    mh.add_many_to_collection(collection_name="FoodInfo", documents=foods)
 
 
 def get_restaurant_in_radius(mh: MongoHelper, lat: float, long: float, radius: float):
@@ -132,7 +128,7 @@ def sort_with_weighted_average(mh: MongoHelper,):
 
 
 if __name__ == '__main__':
-    # initializeDB()
+    initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
     # mongoHelper.sort_with_weighted_rating("France")
