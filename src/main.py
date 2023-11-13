@@ -130,29 +130,37 @@ def sort_with_weighted_average(mh: MongoHelper, ):
     pass
 
 
+PRETTY = True
+
+
+
+
 if __name__ == '__main__':
     # initializeDB()
     mongoHelper = MongoHelper(host="localhost", port=27017, dbName="DDM")
     before = time.time()
-    # mongoHelper.get_vegan_restaurants_in_cities(["Franconville"])
-    # mongoHelper.sort_with_weighted_rating("France")  # 846.56
-    # mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200)  # 0.37
-    # mongoHelper.add_weekend_availability()  # 5671.51
-    # mongoHelper.search_restaurants_in_radius(my_latitude=48.85341,my_longitude=2.3488,max_distance=0.01)  # 62.22
-    # mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)  # 4.01
-    # mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")  # 3.44
-    # mongoHelper.search_popular_in_city(city_name="Paris")  # 574.81
-    # mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris")  # 751.57
-    # print(mongoHelper.find_most_expensive_restaurant_in_each_country())  # 11815.973
-    # print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities())) #3050.03
-    # print((mongoHelper.get_top5_countries_with_the_highest_average_excellent_reviews())) # 1874.02 +
-    # print(mongoHelper.find_the_closest_three_restaurant_in_randon_city()) # 2572.020,2497.96,2444,2947, 2469.03,
-    # 2415.98,2383.03,2481, 3912.00, 2492.03
-
+    # --------------------------------------------------------------------- Queries
+    print(mongoHelper.get_vegan_restaurants_in_cities(["Franconville"], pretty=PRETTY))
+    print(mongoHelper.sort_with_weighted_rating("France", pretty=PRETTY))  # 846.56
+    print(mongoHelper.get_english_speaking_always_open_restaurants(6, 0, 10, 200, pretty=PRETTY))  # 0.37
+    print(mongoHelper.search_restaurants_in_radius(my_latitude=48.85341, my_longitude=2.3488, max_distance=0.01,
+                                                   pretty=PRETTY))  # 62.22
+    print(mongoHelper.search_popular_in_city(city_name="Paris", pretty=PRETTY))  # 574.81
+    print(mongoHelper.search_with_feature(feature="WheelchairAccessible", city="Paris", pretty=PRETTY))  # 751.57
+    print(mongoHelper.find_most_expensive_restaurant_in_each_country(pretty=PRETTY))  # 11815.973
+    print((mongoHelper.find_top10_highest_rating_restaurant_in_the_5most_popular_cities(pretty=PRETTY)))  # 3050.03
+    print((mongoHelper.get_top5_countries_with_the_highest_average_excellent_reviews(pretty=PRETTY)))  # 1874.02 +
+    print(mongoHelper.find_the_closest_three_restaurant_in_randon_city())  # 2572.020, 2497.96, 2444,2947, 2469.03,
+    # 2415.98, 2383.03, 2481, 3912.00, 2492.03
     # --------------------------------------------------------------------- Commands
-    # mongoHelper.increase_price_for_restaurants_with_seating(10, 5))  # 576.23
+    mongoHelper.add_weekend_availability()  # 5671.51
+    mongoHelper.update_ratings(restaurant_link="g10001637-d10002227", rating=Rating.average)  # 4.01
+    mongoHelper.update_restaurant_feature(restaurant_link="g10001637-d10002227", new_feature="toilets")  # 3.44
+    mongoHelper.increase_price_for_restaurants_with_seating(10, 5)  # 576.23
+    mongoHelper.update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Osnabruck()  # 3003
+    # --- extra to check if the command works correctly
+    print(mongoHelper.print_restaurants_connection_in_Osnabruck())
 
-    mongoHelper.update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Rivarennes() #  3003
     after = time.time()
     print(f"Time: {(after - before) * 1000}")
     pass

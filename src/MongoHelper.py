@@ -5,6 +5,7 @@ from geopy.distance import great_circle
 from pymongo import MongoClient
 from pymongo import UpdateOne
 
+
 class Rating(Enum):
     excellent = 5
     very_good = 4
@@ -36,36 +37,50 @@ class MongoHelper:
         restaurants = self.__db["Restaurants"].find({"restaurant_link": {"$in": restaurants_link}})
         return [restaurant for restaurant in restaurants]
 
+    # Queries -----------------------------------------------------------------
     # Query ok
-    def search_with_feature(self, feature: str, city: str) -> list:
+    def search_with_feature(self, feature: str, city: str, pretty: bool):
         """
         filter restaurants in an area that posses a feature
+        :param pretty: prettify the function
         :param feature: word to search
         :param city: city to search in
-        :return: list of restaurants
         """
         restaurants = self.__db["Restaurants"].find({
             'Position.city': city,
             'features': feature
         })
-        return [restaurant for restaurant in restaurants]
+
+        if not pretty:
+            return [restaurant for restaurant in restaurants]
+        else:
+            return prettify([{"City:": restaurant["Position"]["city"],
+                              "Resturant with the feature": restaurant["restaurant_name"]
+                              } for restaurant in restaurants])
 
     # Query ok
-    def search_popular_in_city(self, city_name: str) -> list:
+    def search_popular_in_city(self, city_name: str, pretty: bool):
         """
         return the 3 most popular places (generic) in a city
+        :param pretty:
         :param city_name: name of the city
         :return: list of restaurants link
         """
         restaurants = self.__db["Restaurants"].find({"Popularity.popularity_generic":
-                                                         {"$regex": f"^#[0-9]\D.*{city_name}$"}}).sort(
-            {"Popularity.popularity_generic": 1}).limit(3)
-        return [restaurant.get("restaurant_link") for restaurant in restaurants]
+                                                         {"$regex": f"^#[0-9]\D.*{city_name}$"}})\
+            .sort([("Popularity.popularity_generic", 1)]).limit(3)
+
+        if not pretty:
+            return [restaurant["restaurant_link"] for restaurant in restaurants]
+        else:
+            return prettify([{"resturant-name": restaurant["restaurant_name"], "restaurant-link": restaurant["restaurant_link"]}
+                    for restaurant in restaurants])
 
     # Query ok
-    def search_restaurants_in_radius(self, my_latitude: float, my_longitude: float, max_distance: float) -> list:
+    def search_restaurants_in_radius(self, my_latitude: float, my_longitude: float, max_distance: float, pretty: bool):
         """
         find all restaurants in an area, Warning, the database seem to have incorrect values!!!
+        :param pretty:
         :param my_latitude: latitude of center point to search
         :param my_longitude: longitude of center point to search
         :param max_distance: maximum distance from center point of search (is in degree, so very small value
@@ -95,35 +110,70 @@ class MongoHelper:
             }
         }
         restaurants = self.__db["Restaurants"].find({"$expr": {"$lte": [expression, max_distance]}}).limit(10)
-        return [restaurant.get("restaurant_link") for restaurant in restaurants]
-        # return [{"city": restaurant.get("city"), "lat": restaurant.get("latitude"), "lon": restaurant.get("longitude")} for restaurant in restaurants]  # for test
 
-    def get_vegan_restaurants_in_cities(self, cities: list[str]):
+        if not pretty:
+            return [restaurant.get("restaurant_link") for restaurant in restaurants]
+        else:
+            return prettify([{"city": restaurant["Position"]["city"], "lat": restaurant["Position"]["latitude"],
+                              "lon": restaurant["Position"]["longitude"]}
+                             for restaurant in restaurants])
+
+    def get_vegan_restaurants_in_cities(self, cities: list[str], pretty: bool):
         result = self.__db["Restaurants"].find({"FoodInfo.vegetarian_friendly": "Y",
                                                 "FoodInfo.gluten_free": "Y",
                                                 "Position.city": {"$in": cities}
                                                 })
-        return [el for el in result]
+        if not pretty:
+            return [el for el in result]
+        else:
+            return prettify([{"City": el["Position"]["city"],
+                              "Restaurant name": el["restaurant_name"],
+                              "Is vegan": el["FoodInfo"]["vegan_options"]
+                              }
+                             for el in result])
 
-    def sort_with_weighted_rating(self, country: str):
-        cursor = self.__db["Restaurants"].find(filter={"Position.country": country},
-                                               projection={"weightedRating": {
-                                                   '$add': ["$Rating.food", "$Rating.atmosphere", "$Rating.value",
-                                                            "$Rating.service"]},
-                                                   "restaurant_link": 1})
-        elements = [el for el in cursor]
-        return sorted(elements, key=lambda el: el["weightedRating"], reverse=True)
+    def sort_with_weighted_rating(self, country: str, pretty: bool):
+        cursor = self.__db["Restaurants"].aggregate([
+            {"$match": {"Position.country": country}},
+            {"$project": {
+                "restaurant_link": 1,
+                "weightedRating": {
+                    "$add": [
+                        {"$ifNull": ["$Rating.food", 0]},
+                        {"$ifNull": ["$Rating.atmosphere", 0]},
+                        {"$ifNull": ["$Rating.value", 0]},
+                        {"$ifNull": ["$Rating.service", 0]}
+                    ]
+                }
+            }},
+            {"$sort": {"weightedRating": -1}},
+            {"$limit": 30}
+        ])
+        if not pretty:
+            return [el for el in cursor]
+        else:
+            return prettify(
+                [{"restaurant link": el["restaurant_link"], "weighted rating": el["weightedRating"]} for el in cursor])
 
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int,
-                                                     max_price: int):
+                                                     max_price: int, pretty: bool):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
                                                 "Review.total_reviews_count": {"$gte": reviews},
                                                 "Review.default_language": "English",
                                                 "Price.min_price": {"$gte": min_price},
                                                 "Price.max_price": {"$lte": max_price}})
-        return [el for el in cursor]
+        if not pretty:
+            return [el for el in cursor]
+        else:
+            return prettify([{"Restaurant": el["restaurant_name"],
+                              "Open Days per week": el["Schedule"]["open_days_per_week"],
+                              "Total review count": el["Review"]["total_reviews_count"],
+                              "Minimum price": el["Price"]["min_price"],
+                              "Maximum price": el["Price"]["max_price"]
+                              }
+                             for el in cursor])
 
-    def find_most_expensive_restaurant_in_each_country(self, pretty=True):
+    def find_most_expensive_restaurant_in_each_country(self, pretty : bool):
         cursor = self.__db["Restaurants"].aggregate([
             # filter only for the resturanr tagged "€€-€€€"
             {"$match": {"Price.price_level": "€€-€€€"}},
@@ -145,7 +195,7 @@ class MongoHelper:
                               }
                              for row in cursor])
 
-    def find_top10_highest_rating_restaurant_in_the_5most_popular_cities(self, pretty=True):
+    def find_top10_highest_rating_restaurant_in_the_5most_popular_cities(self, pretty : bool):
         # Find the most popular cities in the world,
         # in order to do it we assumed that the most popular cities are the cities with most entries in the db
         top_cities_cursor = self.__db["Restaurants"].aggregate([
@@ -174,7 +224,7 @@ class MongoHelper:
             }
                 for restaurant in restaurant_cursor])
 
-    def get_top5_countries_with_the_highest_average_excellent_reviews(self, pretty=True):
+    def get_top5_countries_with_the_highest_average_excellent_reviews(self, pretty : bool):
         cursor = self.__db["Restaurants"].aggregate([
             # takes only restaurant with excenllent rating
             {"$match": {"Rating.excellent": {"$exists": True}}},
@@ -203,7 +253,7 @@ class MongoHelper:
         # find a random city with at least 10 restaurant and at most 100
         cities = [
             {"$group": {"_id": "$Position.city", "counts": {"$sum": 1}}},
-            {"$match": {"counts": {"$gte": 10, "$lte": 100}}},
+            {"$match": {"counts": {"$gte": 1000, "$lte": 2000}}},
             {"$sample": {"size": 1}}
         ]
         city = list(self.__db["Restaurants"].aggregate(cities))
@@ -243,7 +293,9 @@ class MongoHelper:
         print(
             f"in City {city_name} with number of restaurants {number_of_resturant}. The closest restaurants between "
             f"each other are: {triple[0]},{triple[1]} and {triple[2]}, "
-            f"distance between the them is {min_distance} m")
+            f"distance between the them is {math.floor(min_distance)} m")
+
+    # Commands -----------------------------------------------------------------
 
     def increase_price_for_restaurants_with_seating(self, minimum_price: int, increase: int):
         self.__db["Restaurants"].update_many(filter={"Position.city": "Paris",
@@ -324,7 +376,7 @@ class MongoHelper:
             "$addToSet": {"features": new_feature}
         })
 
-    def update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Rivarennes(self):
+    def update_restaurant_by_assigning_a_similarly_priced_resturant_to_each_other_in_Osnabruck(self):
         price_levels = ["€", "€€-€€€", "€€€€"]
         to_be_updated = []
 
@@ -332,14 +384,14 @@ class MongoHelper:
             all_restaurants = list(self.__db["Restaurants"].find(
                 # IMPORTANT: unfortunately I could only do it in small cities,
                 # for large cities or the entirety of the db takes too much time
-                {"Position.city": "Rivarennes", "Price.price_level": level},
+                {"Position.city": "Osnabruck", "Price.price_level": level},
                 {"restaurant_link": 1}
             ))
             all_resturant_links = [r["restaurant_link"] for r in all_restaurants]
 
             # Assign similar restaurants
             for restaurant_link in all_resturant_links:
-                #[:4] limit to 4 the operation --> imprve performance
+                # [:4] limit to 4 the operation --> imprve performance
                 similar_priced_restaurant = [r for r in all_resturant_links if r != restaurant_link][:4]
                 to_be_updated.append(UpdateOne(
                     {"restaurant_link": restaurant_link},
@@ -350,6 +402,10 @@ class MongoHelper:
         if to_be_updated:
             self.__db["Restaurants"].bulk_write(to_be_updated)
 
-
-
-
+    def print_restaurants_connection_in_Osnabruck(self):
+        restaurants = self.__db["Restaurants"].find({"Position.city": "Osnabruck"})
+        return prettify([{
+            "Restaurant Name": el.get("restaurant_name"),
+            "Restaurant Link": el.get("restaurant_link"),
+            "Similar Priced Restaurants Links": el.get("similar_priced_restaurants", [])
+        } for el in restaurants if "similar_priced_restaurants" in el and el["similar_priced_restaurants"]])
