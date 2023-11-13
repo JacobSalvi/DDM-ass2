@@ -17,7 +17,7 @@ from src.MongoHelper import MongoHelper, Rating
 
 
 def initializeDB():
-    csv_handler: CsvHandler = CsvHandler("../../tripadvisor_european_restaurants.csv")
+    csv_handler: CsvHandler = CsvHandler("tripadvisor_european_restaurants.csv")
     content = csv_handler.content()
     headers: dict[str, int] = csv_handler.header()
     restaurants = []
