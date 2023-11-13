@@ -15,8 +15,7 @@ class Rating(Enum):
 
 
 def prettify(elements):
-    for element in elements:
-        print(element)
+    return '\n'.join(map(str, elements))
 
 
 class MongoHelper:
@@ -253,7 +252,7 @@ class MongoHelper:
         # find a random city with at least 10 restaurant and at most 100
         cities = [
             {"$group": {"_id": "$Position.city", "counts": {"$sum": 1}}},
-            {"$match": {"counts": {"$gte": 1000, "$lte": 2000}}},
+            {"$match": {"counts": {"$gte": 20, "$lte": 100}}},
             {"$sample": {"size": 1}}
         ]
         city = list(self.__db["Restaurants"].aggregate(cities))
