@@ -154,6 +154,7 @@ class MongoHelper:
             return prettify(
                 [{"restaurant link": el["restaurant_link"], "weighted rating": el["weightedRating"]} for el in cursor])
 
+
     def get_english_speaking_always_open_restaurants(self, open_days: int, reviews: int, min_price: int,
                                                      max_price: int, pretty: bool):
         cursor = self.__db["Restaurants"].find({"Schedule.open_days_per_week": open_days,
